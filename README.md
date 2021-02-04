@@ -30,7 +30,7 @@ http://localhost:8000/api/docs
 `graphiql:`
 http://127.0.0.1:8000/api/docs/graphiql
 
-`/graphql_playground:`
+`graphql_playground:`
 http://127.0.0.1:8000/api/docs/graphql_playground
 
 
