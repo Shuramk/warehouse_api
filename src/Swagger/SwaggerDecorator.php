@@ -4,28 +4,26 @@ declare(strict_types=1);
 
 namespace App\Swagger;
 
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use ApiPlatform\Core\OpenApi\Factory\OpenApiFactoryInterface;
+use ApiPlatform\Core\OpenApi\OpenApi;
+use ApiPlatform\Core\OpenApi\Model;
+use ArrayObject;
 
-final class SwaggerDecorator implements NormalizerInterface
+final class SwaggerDecorator implements OpenApiFactoryInterface
 {
-    private NormalizerInterface $decorated;
+    private OpenApiFactoryInterface $decorated;
 
-    public function __construct(NormalizerInterface $decorated)
+    public function __construct(OpenApiFactoryInterface $decorated)
     {
         $this->decorated = $decorated;
     }
 
-    public function supportsNormalization($data, string $format = null): bool
+    public function __invoke(array $context = []): OpenApi
     {
-        return $this->decorated->supportsNormalization($data, $format);
-    }
+        $openApi = ($this->decorated)($context);
+        $schemas = $openApi->getComponents()->getSchemas();
 
-    public function normalize($object, string $format = null, array $context = [])
-    {
-        $docs = $this->decorated->normalize($object, $format, $context);
-
-        $docs['components']['schemas']['Token'] = [
+        $schemas['Token'] = new ArrayObject([
             'type' => 'object',
             'properties' => [
                 'token' => [
@@ -33,56 +31,115 @@ final class SwaggerDecorator implements NormalizerInterface
                     'readOnly' => true,
                 ],
             ],
-        ];
-
-        $docs['components']['schemas']['Credentials'] = [
+        ]);
+        $schemas['Credentials'] = new ArrayObject([
             'type' => 'object',
             'properties' => [
                 'username' => [
                     'type' => 'string',
-                    'example' => 'api',
+                    'example' => 'test',
                 ],
                 'password' => [
                     'type' => 'string',
-                    'example' => 'api',
+                    'example' => 'testtest',
                 ],
             ],
-        ];
+        ]);
 
-        $tokenDocumentation = [
-            'paths' => [
-                '/authentication_token' => [
-                    'post' => [
-                        'tags' => ['Token'],
-                        'operationId' => 'postCredentialsItem',
-                        'summary' => 'Get JWT token to login.',
-                        'requestBody' => [
-                            'description' => 'Create new JWT Token',
-                            'content' => [
-                                'application/json' => [
-                                    'schema' => [
-                                        '$ref' => '#/components/schemas/Credentials',
-                                    ],
-                                ],
-                            ],
-                        ],
-                        'responses' => [
-                            Response::HTTP_OK => [
-                                'description' => 'Get JWT token',
-                                'content' => [
-                                    'application/json' => [
-                                        'schema' => [
-                                            '$ref' => '#/components/schemas/Token',
-                                        ],
-                                    ],
+        $pathItem = new Model\PathItem(
+            'JWT Token', null, null, null, null,
+            new Model\Operation(
+                'postCredentialsItem',
+                ['Users'],
+                [
+                    '200' => [
+                        'description' => 'Get JWT token',
+                        'content' => [
+                            'application/json' => [
+                                'schema' => [
+                                    '$ref' => '#/components/schemas/Token',
                                 ],
                             ],
                         ],
                     ],
                 ],
-            ],
-        ];
+                'Get JWT token to login.',
+                '',
+                null,
+                [],
+                new Model\RequestBody(
+                    'Generate new JWT Token',
+                    new ArrayObject([
+                        'application/json' => [
+                            'schema' => [
+                                '$ref' => '#/components/schemas/Credentials',
+                            ],
+                        ],
+                    ]),
+                ),
+                null, false, null, null,
 
-        return array_merge_recursive($docs, $tokenDocumentation);
+            ),
+        );
+        $openApi->getPaths()->addPath('/api/login_check', $pathItem);
+
+
+        $schemas['Register'] = new ArrayObject([
+            'type' => 'object',
+            'properties' => [
+                'name' => [
+                    'type' => 'string',
+                    'example' => 'Вася Пупкин',
+                ],
+                'username' => [
+                    'type' => 'string',
+                    'example' => 'test',
+                ],
+                'password' => [
+                    'type' => 'string',
+                    'example' => 'testtest',
+                ],
+            ],
+        ]);
+        $pathItem = new Model\PathItem(
+            'Users', null, null, null, null,
+            new Model\Operation(
+                'postRegisterData',
+                ['Users'],
+                [
+                    '200' => [
+                        'description' => 'User successfully created',
+                    ],
+                    '422' => [
+                        'description' => 'Validation errors',
+                    ],
+                    'default' => [
+                        'description' => 'unexpected error'
+                    ]
+
+                ],
+                'Register new user.',
+                '',
+                null,
+                [],
+                new Model\RequestBody(
+                    'Register new user',
+                    new ArrayObject([
+                        'application/json' => [
+                            'schema' => [
+                                '$ref' => '#/components/schemas/Register',
+                            ],
+                        ],
+                    ]),
+                ),
+                null, false, null, null,
+
+            ),
+        );
+
+        $openApi->getPaths()->addPath('/api/register', $pathItem);
+
+        return $openApi;
     }
+
 }

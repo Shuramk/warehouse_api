@@ -31,6 +31,5 @@ services:
     # please note that last definitions always *replace* previous ones
 
     App\Swagger\SwaggerDecorator:
-        decorates: 'api_platform.swagger.normalizer.documentation'
-        arguments: [ '@App\Swagger\SwaggerDecorator.inner' ]
+        decorates: 'api_platform.openapi.factory'
         autoconfigure: false
